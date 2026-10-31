@@ -52,7 +52,7 @@ diagnostic script that names the actual cause when it doesn't work.
 ## Install on Arch Linux
 
 ```bash
-git clone  https://discord.gg/aSRmtvdW3Z.git
+git clone  https://github.com/Aro-KRD/aro-krd-airplay.git
 cd pcairplay
 
 # Preview package, service, firewall, and user-integration changes:

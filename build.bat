@@ -3,27 +3,30 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================================================
-echo       BUILDING AIRPLAY WINDOWS EXECUTABLES AND LAUNCHERS
+echo       BUILDING AIRBRIDGE WINDOWS EXECUTABLES AND LAUNCHERS
 echo ========================================================================
 echo.
 
-call "%~dp0make-exe.bat"
+call "%~dp0make-exe.bat" %*
 if errorlevel 1 (
     echo [FAILED] Compilation failed.
-    pause
+    if /i not "%~1"=="nopause" pause
     exit /b 1
 )
 
-echo [INFO] Self-testing compiled AirPlayPC.exe ...
-"%~dp0AirPlayPC.exe" -SelfTest
+echo [INFO] Self-testing compiled AirBridge.exe ...
+"%~dp0AirBridge.exe" -SelfTest
 if errorlevel 1 (
-    echo [WARNING] Self-test returned error.
+    echo [WARNING] AirBridge.exe self-test returned error.
 ) else (
-    echo [PASS] AirPlayPC.exe self-test passed successfully!
+    echo [PASS] AirBridge.exe self-test passed successfully!
 )
 
 echo.
 echo ========================================================================
-echo [SUCCESS] Build finished! Double-click AirPlayPC.exe or run.bat to launch.
+echo [SUCCESS] Build finished! Double-click AirBridge.exe or run.bat to launch.
 echo ========================================================================
 echo.
+if /i not "%~1"=="nopause" (
+    pause
+)

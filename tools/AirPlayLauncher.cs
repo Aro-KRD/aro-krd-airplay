@@ -5,10 +5,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Aro-KRD-Airplay")]
-[assembly: AssemblyDescription("Aro-KRD-Airplay - Low Latency AirPlay Screen Receiver for Windows")]
+[assembly: AssemblyTitle("AirBridge")]
+[assembly: AssemblyDescription("AirBridge - Low Latency AirPlay Screen Receiver for Windows")]
 [assembly: AssemblyCompany("arokrd")]
-[assembly: AssemblyProduct("Aro-KRD-Airplay")]
+[assembly: AssemblyProduct("AirBridge")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 arokrd")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
@@ -41,7 +41,7 @@ namespace AirPlayLauncher
             {
                 MessageBox.Show(
                     "Could not find airplay-ui.ps1 in:\n" + baseDir,
-                    "Aro-KRD-Airplay",
+                    "AirBridge",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return 1;
@@ -103,9 +103,9 @@ namespace AirPlayLauncher
                 "  & $env:PCAIRPLAY_UI" + forwardedArgs + "; " +
                 "  if ($LASTEXITCODE) { throw ('airplay-ui.ps1 exited with code ' + $LASTEXITCODE + '.') } " +
                 "} catch { " +
-                "  $m = 'aro-krd-airplay failed to start.' + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message; " +
-                "  try { Set-Content -LiteralPath ($env:TEMP + '\\pcairplay-crash.log') -Value ($m + [Environment]::NewLine + $_.ScriptStackTrace) } catch { }; " +
-                "  try { [void][System.Windows.MessageBox]::Show($m, 'Aro-KRD-Airplay', 'OK', 'Error') } catch { }; " +
+                "  $m = 'AirBridge failed to start.' + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message; " +
+                "  try { Set-Content -LiteralPath ($env:TEMP + '\\airbridge-crash.log') -Value ($m + [Environment]::NewLine + $_.ScriptStackTrace) } catch { }; " +
+                "  try { [void][System.Windows.MessageBox]::Show($m, 'AirBridge', 'OK', 'Error') } catch { }; " +
                 "  exit 1 " +
                 "}";
 
@@ -129,7 +129,7 @@ namespace AirPlayLauncher
             {
                 MessageBox.Show(
                     "Failed to launch PowerShell host:\n\n" + ex.Message,
-                    "Aro-KRD-Airplay",
+                    "AirBridge",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return 1;
@@ -137,4 +137,3 @@ namespace AirPlayLauncher
         }
     }
 }
-

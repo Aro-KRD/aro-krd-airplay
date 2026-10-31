@@ -1,0 +1,27 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Windows files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.vbs text eol=crlf
+*.iss text eol=crlf
+
+# Shell scripts and Linux files must always use LF
+*.sh text eol=lf
+*.py text eol=lf
+PKGBUILD text eol=lf
+*.desktop text eol=lf
+*.service text eol=lf
+
+# Binary files
+*.png binary
+*.ico binary
+*.bmp binary
+*.jpg binary
+*.jpeg binary
+*.exe binary
+*.dll binary
+*.zip binary
+*.tar.gz binary

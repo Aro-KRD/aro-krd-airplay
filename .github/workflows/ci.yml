@@ -25,7 +25,7 @@ jobs:
 
       - name: Shell syntax and setup preview
         run: |
-          for file in arch/setup.sh arch/PKGBUILD setup.sh start-airplay.sh doctor.sh aro-krd-airplay.sh aro-krd-airplay-Control.sh; do
+          for file in arch/setup.sh arch/PKGBUILD setup.sh start-airplay.sh doctor.sh aro-krd-airplay.sh aro-krd-airplay-Control.sh AirBridge.sh AirBridge-Control.sh AirPlayPC.sh AirPlayPC-Control.sh; do
             bash -n "$file"
           done
           # setup correctly refuses non-Arch hosts; exercise its help parser here.
@@ -36,6 +36,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build Windows executable
+        shell: powershell
+        run: .\make-exe.bat nopause
+
+      - name: Executable self-test
+        shell: powershell
+        run: .\AirBridge.exe -SelfTest
 
       # The exact flow a new user runs: query upstream releases, download the
       # pinned 1.x installer, verify its SHA-256 against the API digest, silent
@@ -82,6 +90,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build Windows executable
+        shell: powershell
+        run: .\make-exe.bat nopause
 
       - name: Compile installer (smoke build)
         shell: powershell

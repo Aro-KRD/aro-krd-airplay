@@ -1,10 +1,19 @@
 name: Release
 
-# Tag vX.Y.Z -> build the net-installer and the plain-scripts zip, hash both,
-# publish a GitHub release with all three files attached.
+# Trigger on any tag push, manual trigger, or when a release is published via UI
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
+      - '*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (e.g. v1.0.0 or arokrd)'
+        required: false
+        default: 'v1.0.0'
 
 permissions:
   contents: write
@@ -16,11 +25,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Version from tag
+      - name: Version and tag resolution
         id: ver
         shell: powershell
         run: |
-          $v = "${{ github.ref_name }}".TrimStart('v')
+          $rawTag = "${{ github.event.inputs.tag }}"
+          if (-not $rawTag) { $rawTag = "${{ github.event.release.tag_name }}" }
+          if (-not $rawTag) { $rawTag = "${{ github.ref_name }}" }
+          if (-not $rawTag -or $rawTag -eq "main" -or $rawTag -eq "master") { $rawTag = "v1.0.0" }
+
+          $v = $rawTag.TrimStart('v')
+          if ($v -notmatch '^\d+(\.\d+)+') {
+            $v = "1.0.0"
+          }
+          Write-Host "Target tag: $rawTag"
+          Write-Host "Version: $v"
+          "tag=$rawTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Build Windows executable
@@ -66,19 +86,32 @@ jobs:
       - name: SHA256SUMS
         shell: powershell
         run: |
-          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item *.zip) + @(Get-Item *-arch.tar.gz -ErrorAction SilentlyContinue)
+          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item AirBridge.exe) + @(Get-Item *.zip) + @(Get-Item *-arch.tar.gz -ErrorAction SilentlyContinue)
           $lines = foreach ($f in $items) {
             '{0}  {1}' -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $f.Name
           }
           $lines | Out-File SHA256SUMS.txt -Encoding ascii
           Get-Content SHA256SUMS.txt
 
-      - name: Create GitHub release
+      - name: Publish assets to GitHub release
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $assets = @(Get-Item installer\Output\*.exe) + @(Get-Item *.zip) + @(Get-Item *-arch.tar.gz -ErrorAction SilentlyContinue) + @(Get-Item SHA256SUMS.txt)
+          $targetTag = "${{ steps.ver.outputs.tag }}"
+          $assets = @(Get-Item installer\Output\*.exe) + @(Get-Item AirBridge.exe) + @(Get-Item *.zip) + @(Get-Item *-arch.tar.gz -ErrorAction SilentlyContinue) + @(Get-Item SHA256SUMS.txt)
           $assetPaths = $assets | ForEach-Object { $_.FullName }
-          gh release create "${{ github.ref_name }}" @assetPaths --title "AirBridge ${{ steps.ver.outputs.version }}" --generate-notes
+
+          Write-Host "Target tag is: $targetTag"
+          Write-Host "Assets to publish:"
+          $assetPaths | ForEach-Object { Write-Host "  - $_" }
+
+          gh release view $targetTag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $targetTag already exists. Uploading assets..."
+            gh release upload $targetTag @assetPaths --clobber
+          } else {
+            Write-Host "Creating release $targetTag..."
+            gh release create $targetTag @assetPaths --title "AirBridge ${{ steps.ver.outputs.version }}" --generate-notes
+          }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

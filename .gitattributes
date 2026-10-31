@@ -25,3 +25,4 @@ PKGBUILD text eol=lf
 *.dll binary
 *.zip binary
 *.tar.gz binary
+

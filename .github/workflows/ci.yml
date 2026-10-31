@@ -25,11 +25,12 @@ jobs:
 
       - name: Shell syntax and setup preview
         run: |
+          chmod +x arch/setup.sh arch/*.py *.sh 2>/dev/null || true
           for file in arch/setup.sh arch/PKGBUILD setup.sh start-airplay.sh doctor.sh aro-krd-airplay.sh aro-krd-airplay-Control.sh AirBridge.sh AirBridge-Control.sh AirPlayPC.sh AirPlayPC-Control.sh; do
             bash -n "$file"
           done
           # setup correctly refuses non-Arch hosts; exercise its help parser here.
-          ./arch/setup.sh --help
+          bash ./arch/setup.sh --help
 
   test:
     runs-on: windows-latest

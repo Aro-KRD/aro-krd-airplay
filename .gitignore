@@ -14,6 +14,11 @@ audiodump*.aac
 audiodump*.alac
 audiodump*.aud
 
+# Web App build & dependencies
+node_modules/
+.next/
+.vercel/
+
 # Downloaded installers
 *.exe
 *.zip

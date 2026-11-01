@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import AppPreview from "@/components/AppPreview";
+import HowItWorks from "@/components/HowItWorks";
 import Features from "@/components/Features";
 import ArchGuide from "@/components/ArchGuide";
 import Faq from "@/components/Faq";
@@ -13,6 +14,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <AppPreview />
+      <HowItWorks />
       <Features />
       <ArchGuide />
       <Faq />

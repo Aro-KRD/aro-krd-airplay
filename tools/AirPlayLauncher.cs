@@ -23,6 +23,9 @@ namespace AirPlayLauncher
         [DllImport("user32.dll")]
         private static extern bool SetProcessDPIAware();
 
+        [DllImport("shell32.dll")]
+        private static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
+
         private const int ATTACH_PARENT_PROCESS = -1;
 
         [STAThread]
@@ -31,6 +34,12 @@ namespace AirPlayLauncher
             try
             {
                 SetProcessDPIAware();
+            }
+            catch { }
+
+            try
+            {
+                SetCurrentProcessExplicitAppUserModelID("arokrd.pcairplay");
             }
             catch { }
 

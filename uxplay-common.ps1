@@ -655,7 +655,7 @@ function Get-UxPlayEngineProcess {
 # strict-clean.
 
 function Get-FramedMirrorMutexName   { 'Local\PCAirPlay-FramedMirror' }
-function Get-FramedMirrorWindowTitle { 'aro-krd-airplay - Framed Mirror' }
+function Get-FramedMirrorWindowTitle { 'AirBridge - Framed Mirror' }
 
 function Initialize-PCAirPlayNative {
     <#
@@ -742,6 +742,9 @@ function Close-FramedMirrorWindow {
     $title = Get-FramedMirrorWindowTitle
     $h = [PCAirPlayNative]::FindWindowByTitle($title)
     if ($h -eq [IntPtr]::Zero) {
+        $h = [PCAirPlayNative]::FindWindowByTitle('aro-krd-airplay - Framed Mirror')
+    }
+    if ($h -eq [IntPtr]::Zero) {
         # Mutex held but no window yet: a frame still starting up. One retry
         # beat, then report honestly rather than spin.
         Start-Sleep -Milliseconds 400
@@ -766,9 +769,15 @@ function Show-PCAirPlayUiWindow {
         double-clicked launcher surfaces the window that already exists
         instead of stacking a twin on top of it.
     #>
-    param([string]$Title = 'aro-krd-airplay')
+    param([string]$Title = 'AirBridge')
     if (-not (Initialize-PCAirPlayNative)) { return $false }
     $h = [PCAirPlayNative]::FindWindowByTitle($Title)
+    if ($h -eq [IntPtr]::Zero) {
+        $h = [PCAirPlayNative]::FindWindowByTitle('Aro-KRD-Airplay')
+    }
+    if ($h -eq [IntPtr]::Zero) {
+        $h = [PCAirPlayNative]::FindWindowByTitle('aro-krd-airplay')
+    }
     if ($h -eq [IntPtr]::Zero) { return $false }
     if ([PCAirPlayNative]::IsIconic($h)) {
         [void][PCAirPlayNative]::ShowWindow($h, [PCAirPlayNative]::SW_RESTORE)

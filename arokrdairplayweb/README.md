@@ -58,3 +58,4 @@ vercel --prod
 3. Import your GitHub repository `Aro-KRD/aro-krd-airplay`.
 4. In **Root Directory**, click **Edit** and choose `arokrdairplayweb`.
 5. Click **Deploy**! Vercel will automatically build and publish your site with a free `*.vercel.app` domain and SSL certificate.
+

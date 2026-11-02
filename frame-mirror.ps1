@@ -62,11 +62,23 @@
 [CmdletBinding()]
 param(
     [switch]$SelfTest,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [string]$OwnerHwnd = ''
 )
 
 Set-StrictMode -Version 3
 $ErrorActionPreference = 'Stop'
+
+# AppUserModelID ensures Windows associates any window of this process with AirBridge,
+# preventing a separate generic PowerShell icon from ever appearing on the taskbar.
+try {
+    if (-not ('Native.Shell' -as [type])) {
+        Add-Type -Namespace Native -Name Shell -MemberDefinition @'
+[DllImport("shell32.dll")] public static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string id);
+'@
+    }
+    [void][Native.Shell]::SetCurrentProcessExplicitAppUserModelID('arokrd.pcairplay')
+} catch { }
 
 # For the mutex name, the window title and the log directory - the UI's
 # frame-coupling helpers (Test-FramedMirrorRunning, Close-FramedMirrorWindow)
@@ -176,9 +188,9 @@ public static class FrameNative
 $bezelXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="aro-krd-airplay - Framed Mirror"
+        Title="AirBridge - Framed Mirror"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ResizeMode="NoResize" ShowInTaskbar="True" SizeToContent="Manual"
+        ResizeMode="NoResize" ShowInTaskbar="False" SizeToContent="Manual"
         UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Grid x:Name="Root" Background="#01000000">
     <Canvas x:Name="ButtonCanvas">
@@ -219,7 +231,7 @@ $bezelXaml = @'
 $overlayXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="aro-krd-airplay - Frame Overlay"
+        Title="AirBridge - Frame Overlay"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False"
         UseLayoutRounding="True">
@@ -901,8 +913,19 @@ foreach ($pct in 60, 80, 100, 125) {
     $item.Add_Click({ param($s, $e) $script:Zoom = [double]$s.Tag; Set-FrameLayout })
     [void]$menu.Items.Add($item)
 }
+[void]$menu.Items.Add((New-Object System.Windows.Controls.Separator))
+
+$dashItem = New-Object System.Windows.Controls.MenuItem
+$dashItem.Header = 'AirBridge Dashboard'
+$dashItem.Add_Click({
+    try {
+        [void](Show-PCAirPlayUiWindow)
+    } catch { }
+})
+[void]$menu.Items.Add($dashItem)
+
 $close = New-Object System.Windows.Controls.MenuItem
-$close.Header = 'Close frame (mirror window survives)'
+$close.Header = 'Close Mirroring'
 $close.Add_Click({ $w.Bezel.Close() })
 [void]$menu.Items.Add($close)
 $ui.Root.ContextMenu = $menu
@@ -1113,6 +1136,15 @@ $w.Bezel.Add_Closing({
 $w.Bezel.Add_SourceInitialized({
     $src = [System.Windows.PresentationSource]::FromVisual($w.Bezel)
     if ($src) { $script:DpiScale = $src.CompositionTarget.TransformToDevice.M11 }
+    if ($OwnerHwnd) {
+        try {
+            $hOwner = [IntPtr][long]$OwnerHwnd
+            if ($hOwner -ne [IntPtr]::Zero -and [FrameNative]::IsWindow($hOwner)) {
+                $interop = New-Object System.Windows.Interop.WindowInteropHelper($w.Bezel)
+                [void][FrameNative]::SetWindowLongPtr($interop.Handle, [FrameNative]::GWLP_HWNDPARENT, $hOwner)
+            }
+        } catch { }
+    }
 })
 
 $saved = Restore-FrameSettings

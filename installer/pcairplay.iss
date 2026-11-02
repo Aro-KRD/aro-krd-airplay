@@ -1,11 +1,8 @@
-; aro-krd-airplay net-installer (Inno Setup 6).
+; aro-krd-airplay net-installer (Inno Setup 6 / 7).
 ;
-; Deliberately installs ONLY the MIT-licensed scripts in this repo. The UxPlay
-; engine (GPL-3.0, vendoring a reverse-engineered FairPlay implementation) is
-; downloaded from its own upstream GitHub release at setup time by setup.ps1
-; with a SHA-256 check, and Apple Bonjour cannot be redistributed at all -- so
-; a full offline bundle is not an option, and this stays a thin installer on
-; purpose. Nothing of Apple's and nothing GPL ships inside this exe.
+; Deliberately installs ONLY the MIT-licensed scripts and launcher in this repo.
+; The UxPlay engine (GPL-3.0) is downloaded directly by the installer with a
+; native progress bar and SHA-256 integrity verification, then silently installed.
 ;
 ; Built by .github/workflows/release.yml:
 ;     ISCC.exe /DMyAppVersion=<x.y.z> installer\pcairplay.iss
@@ -30,10 +27,7 @@ AppUpdatesURL={#MyAppURL}/releases
 DefaultDirName={autopf}\AirBridge
 DefaultGroupName=AirBridge
 DisableProgramGroupPage=yes
-; "x64compatible" (Inno >= 6.3) rather than the removed-in-7.x "x64" alias.
 ArchitecturesInstallIn64BitMode=x64compatible
-; setup.ps1 needs Administrator (firewall rules, service checks), and it runs
-; from [Run] below in the installer's context.
 PrivilegesRequired=admin
 MinVersion=10.0
 LicenseFile=..\LICENSE
@@ -42,11 +36,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName={#MyAppName}
-; The app icon, everywhere Windows shows one: the setup exe itself (what the
-; user downloads), Apps & Features, and the shortcuts below.
 SetupIconFile=..\pcairplay.ico
 UninstallDisplayIcon={app}\pcairplay.ico
-; Wizard art: AirBridge branding
 WizardImageFile=wizard-image-100.bmp,wizard-image-200.bmp
 WizardSmallImageFile=wizard-small-100.bmp,wizard-small-200.bmp
 
@@ -75,20 +66,123 @@ Name: "{group}\AirBridge Diagnostics";  Filename: "{app}\Diagnostics.cmd"; Worki
 Name: "{group}\Uninstall AirBridge";    Filename: "{uninstallexe}"
 Name: "{autodesktop}\AirBridge";        Filename: "{app}\AirBridge.exe"; WorkingDir: "{app}"; IconFilename: "{app}\pcairplay.ico"; AppUserModelID: "arokrd.pcairplay"; Tasks: desktopicon
 
-[Run]
-; Interactive installs: keep the console open (-NoExit) so what setup did -
-; the engine download, the Bonjour verdict, the firewall result - can actually
-; be read. nowait, or that console would hold the installer open forever.
-; runascurrentuser is REQUIRED: the postinstall flag implies runasoriginaluser
-; (de-elevated), and setup.ps1 then refuses with "must run as Administrator"
-; right at the finish line. Caught live on the first real install.
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -NoExit -File ""{app}\setup.ps1"""; Description: "Run first-time setup now (downloads the UxPlay engine)"; Flags: nowait postinstall skipifsilent runascurrentuser
+[Code]
+var
+  DownloadPage: TDownloadWizardPage;
+  UxPlayNeeded: Boolean;
 
-; Silent installs (winget and friends): same setup, hidden and waited on, so a
-; silent install still ends fully configured.
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\setup.ps1"""; Flags: runhidden waituntilterminated; Check: WizardSilent
+function IsUxPlayInstalled: Boolean;
+var
+  TestPath: string;
+begin
+  Result := False;
+  // Check known install locations for UxPlay 1.x CLI engine
+  TestPath := ExpandConstant('{commonpf32}\uxplay-windows\_internal\bin\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{commonpf64}\uxplay-windows\_internal\bin\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{autopf}\uxplay-windows\_internal\bin\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{commonpf32}\uxplay-windows\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{commonpf64}\uxplay-windows\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{autopf}\uxplay-windows\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{localappdata}\Programs\uxplay-windows\_internal\bin\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+
+  TestPath := ExpandConstant('{localappdata}\Programs\uxplay-windows\uxplay.exe');
+  if FileExists(TestPath) then begin Result := True; Exit; end;
+end;
+
+procedure InitializeWizard;
+begin
+  // Built-in Inno Setup download page with real-time download progress bar
+  DownloadPage := CreateDownloadPage(
+    SetupMessage(msgWizardPreparing),
+    'Downloading UxPlay AirPlay engine...',
+    nil
+  );
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = wpReady then
+  begin
+    UxPlayNeeded := not IsUxPlayInstalled;
+    if UxPlayNeeded then
+    begin
+      DownloadPage.Clear;
+      DownloadPage.Add(
+        'https://github.com/leapbtw/uxplay-windows/releases/download/v1.72.1-3/uxplay-windows-installer-v1.72.1-3.exe',
+        'uxplay-setup.exe',
+        'cb45de36d960b27d60dfe16a2a45489bd287d4335d37967f109d8cc4b5372986'
+      );
+      DownloadPage.Show;
+      try
+        try
+          DownloadPage.Download;
+        except
+          if DownloadPage.AbortedByUser then
+          begin
+            Log('UxPlay download was aborted by user.');
+            Result := False;
+            Exit;
+          end
+          else
+          begin
+            SuppressibleMsgBox(
+              'Failed to download the UxPlay engine: ' + GetExceptionMessage + #13#10#13#10 +
+              'Setup will continue, but AirBridge requires UxPlay to receive AirPlay connections.',
+              mbError, MB_OK, IDOK
+            );
+          end;
+        end;
+      finally
+        DownloadPage.Hide;
+      end;
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  UxInstaller: string;
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    UxInstaller := ExpandConstant('{tmp}\uxplay-setup.exe');
+    if FileExists(UxInstaller) then
+    begin
+      WizardForm.StatusLabel.Caption := 'Installing UxPlay engine...';
+      // Execute UxPlay installer silently in the background
+      Exec(UxInstaller, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      // Suppress any competing window that might have been spawned
+      Exec('taskkill.exe', '/F /IM uxplay-windows.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      DeleteFile(UxInstaller);
+    end;
+  end;
+end;
+
+[Run]
+; Configure firewall rules silently in the background with zero visible console window.
+; -SkipInstall ensures setup.ps1 does not attempt to download UxPlay again or open a terminal.
+; -SkipBonjourCheck ensures installation completes smoothly even if Bonjour is not yet present.
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\setup.ps1"" -SkipInstall -SkipBonjourCheck"; Flags: runhidden waituntilterminated
+
+; Launch AirBridge directly from the finish page without any console window
+Filename: "{app}\AirBridge.exe"; Description: "{cm:LaunchProgram,AirBridge}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 ; Removes the firewall rules setup.ps1 created. UxPlay and Bonjour keep their
-; own Apps & Features entries; setup.ps1 -Uninstall says so too.
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\setup.ps1"" -Uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemovePCAirPlayFirewallRules"
+; own Apps & Features entries.
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\setup.ps1"" -Uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemovePCAirPlayFirewallRules"

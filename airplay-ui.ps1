@@ -147,7 +147,7 @@ try {
     [xml]$xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Aro-KRD-Airplay" Width="524" SizeToContent="Height"
+        Title="AirBridge" Width="524" SizeToContent="Height"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI Variable Display, Segoe UI Variable Text, Segoe UI"
@@ -432,7 +432,7 @@ try {
 
       <!-- Title bar (drag handle) -->
       <Grid x:Name="TitleBar" Height="30" Background="#00000000">
-        <TextBlock Text="Aro-KRD-Airplay" Foreground="#0B2B66" FontSize="12.5"
+        <TextBlock Text="AirBridge" Foreground="#0B2B66" FontSize="12.5"
                    FontWeight="Bold" VerticalAlignment="Center"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <Button x:Name="MinBtn" Style="{StaticResource WinBtn}" Content="&#x2500;"
@@ -841,9 +841,16 @@ try {
         if (Test-FramedMirrorRunning) { return }
         $frame = Join-Path $PSScriptRoot 'frame-mirror.ps1'
         if (-not (Test-Path -LiteralPath $frame)) { return }
-        Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
+        $ownerArg = @()
+        try {
+            $helper = New-Object System.Windows.Interop.WindowInteropHelper($window)
+            if ($helper.Handle -ne [IntPtr]::Zero) {
+                $ownerArg = @('-OwnerHwnd', "$($helper.Handle)")
+            }
+        } catch { }
+        Start-Process powershell.exe -WindowStyle Hidden -ArgumentList (@(
             '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
-            '-File', "`"$frame`"", '-Quiet')
+            '-File', "`"$frame`"", '-Quiet') + $ownerArg)
         $script:frameLaunchedAt = Get-Date
     }
 
@@ -1221,6 +1228,17 @@ try {
         if ($s.Key -ne $script:liveStateKey) {
             $script:liveStateKey = $s.Key
             Update-Status -Headline $s.Headline -Detail $s.Detail
+            if ($s.Key -eq 'mirroring' -and $ui.FrameCheck.IsChecked -and -not $script:isSelfTest) {
+                try {
+                    # Auto-minimize dashboard to taskbar/tray so only the sleek phone is visible!
+                    $window.WindowState = 'Minimized'
+                } catch { }
+            } elseif ($s.Key -ne 'mirroring' -and $window.WindowState -eq 'Minimized' -and -not $script:isSelfTest) {
+                try {
+                    $window.WindowState = 'Normal'
+                    $window.Activate()
+                } catch { }
+            }
         }
     }
 
@@ -1609,7 +1627,7 @@ try {
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             $script:notifyIcon = New-Object System.Windows.Forms.NotifyIcon
             $script:notifyIcon.Icon = New-Object System.Drawing.Icon $script:appIconPath
-            $script:notifyIcon.Text = 'Aro-KRD-Airplay'
+            $script:notifyIcon.Text = 'AirBridge'
             $script:notifyIcon.Visible = $true
 
             $script:notifyIcon.add_MouseClick({
@@ -1618,7 +1636,7 @@ try {
             })
 
             $trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
-            $trayOpen = $trayMenu.Items.Add('Open aro-krd-airplay')
+            $trayOpen = $trayMenu.Items.Add('Open AirBridge')
             $trayOpen.Font = New-Object System.Drawing.Font $trayOpen.Font, ([System.Drawing.FontStyle]::Bold)
             $trayOpen.add_Click({ & $script:trayRestore })
             [void]$trayMenu.Items.Add('-')

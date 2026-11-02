@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RELEASE_BASE = "https://github.com/Aro-KRD/aro-krd-airplay/releases/download/arokrd";
+const RELEASE_BASE = "https://github.com/Aro-KRD/aro-krd-airplay/releases/download/v1.0.1";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   switch (target.toLowerCase()) {
     case "installer":
     case "setup":
-      return NextResponse.redirect(`${RELEASE_BASE}/AirBridge-setup-1.0.0.exe`, {
+      return NextResponse.redirect(`${RELEASE_BASE}/AirBridge-setup-1.0.1.exe`, {
         status: 307,
       });
 
@@ -21,25 +21,25 @@ export async function GET(request: NextRequest) {
 
     case "zip":
     case "portable":
-      return NextResponse.redirect(`${RELEASE_BASE}/AirBridge-1.0.0.zip`, {
+      return NextResponse.redirect(`${RELEASE_BASE}/AirBridge-1.0.1.zip`, {
         status: 307,
       });
 
     case "arch":
     case "linux":
-      return NextResponse.redirect(`${RELEASE_BASE}/aro-krd-airplay-1.0.0-arch.tar.gz`, {
+      return NextResponse.redirect(`${RELEASE_BASE}/aro-krd-airplay-1.0.1-arch.tar.gz`, {
         status: 307,
       });
 
     default:
       return NextResponse.json({
         name: "AirBridge",
-        version: "1.0.0",
+        version: "1.0.1",
         downloads: {
-          installer: `${RELEASE_BASE}/AirBridge-setup-1.0.0.exe`,
+          installer: `${RELEASE_BASE}/AirBridge-setup-1.0.1.exe`,
           standalone: `${RELEASE_BASE}/AirBridge.exe`,
-          portableZip: `${RELEASE_BASE}/AirBridge-1.0.0.zip`,
-          archLinux: `${RELEASE_BASE}/aro-krd-airplay-1.0.0-arch.tar.gz`,
+          portableZip: `${RELEASE_BASE}/AirBridge-1.0.1.zip`,
+          archLinux: `${RELEASE_BASE}/aro-krd-airplay-1.0.1-arch.tar.gz`,
         },
       });
   }
